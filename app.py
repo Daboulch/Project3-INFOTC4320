@@ -4,16 +4,48 @@ import requests
 from datetime import datetime
 
 def get_symbol():
-#Blake
-    return ()
+    symbol = input("Enter the stock symbol (e.g., AAPL, TSLA, MSFT): ").upper().strip()
+    return symbol
+
 
 def get_chart():
-#Blake
-    return ()
+    print("\nChoose a chart type:")
+    print("1. Line")
+    print("2. Bar")
+    print("3. Candlestick")
+    chart_choice = input("Enter your choice (1-3): ").strip()
+
+    if chart_choice == "1":
+        chart_type = "line"
+    elif chart_choice == "2":
+        chart_type = "bar"
+    elif chart_choice == "3":
+        chart_type = "candlestick"
+    else:
+        print("Invalid choice, defaulting to line chart.")
+        chart_type = "line"
+
+    return chart_type
+
 
 def get_time_series():
-#Blake
-    return()
+    print("\nChoose a time series function:")
+    print("1. TIME_SERIES_DAILY")
+    print("2. TIME_SERIES_WEEKLY")
+    print("3. TIME_SERIES_MONTHLY")
+    time_choice = input("Enter your choice (1-3): ").strip()
+
+    if time_choice == "1":
+        time_series = "TIME_SERIES_DAILY"
+    elif time_choice == "2":
+        time_series = "TIME_SERIES_WEEKLY"
+    elif time_choice == "3":
+        time_series = "TIME_SERIES_MONTHLY"
+    else:
+        print("Invalid choice, defaulting to TIME_SERIES_DAILY.")
+        time_series = "TIME_SERIES_DAILY"
+
+    return time_series
 
 def get_date():
 #Pranya
