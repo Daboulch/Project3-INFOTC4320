@@ -2,30 +2,67 @@ import pygal
 import lxml
 import requests
 from datetime import datetime
+import sys
+
+api_key = "EDR5KNC8XVI980TW"
+url = "https://www.alphavantage.co/query"
 
 def get_symbol():
-    symbol = input("Enter the stock symbol (e.g., AAPL, TSLA, MSFT): ").upper().strip()
-    return symbol
+    while True:
+        symbol = input("Enter the stock symbol (e.g., AAPL, TSLA, MSFT): ").upper().strip()
+
+        params = {
+            "function": "SYMBOL_SEARCH",
+            "keywords": symbol,
+            "apikey": api_key,
+        }
+
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            if "Information" in data:
+                print(f"API limit reached: {data['Information']}")
+                sys.exit()
+
+            if "Error Message" in data:
+                print(f"API returned an error: {data['Error Message']}")
+                sys.exit()
+
+            matches = []
+            for x in data.get("bestMatches", []):
+                value = x.get("1. symbol", "")
+                if value:
+                    matches.append(value.upper().strip())
+            
+            if symbol.upper() in matches:
+                return symbol.upper()
+            else:
+                print("Stock symbol is invalid. Please enter a valid symbol.")
+
+        except requests.RequestException as error:
+            print(error)
+            sys.exit()
+
 
 
 def get_chart():
     print("\nChoose a chart type:")
     print("1. Line")
     print("2. Bar")
-    print("3. Candlestick")
-    chart_choice = input("Enter your choice (1-3): ").strip()
+    
+    while True:
+        chart_choice = input("Enter your choice (1-2): ").strip()
+        if chart_choice == "1":
+            chart_type = "line"
+        elif chart_choice == "2":
+            chart_type = "bar"
+        else:
+            print("Invalid choice, please choose 1 or 2.")
+            continue
 
-    if chart_choice == "1":
-        chart_type = "line"
-    elif chart_choice == "2":
-        chart_type = "bar"
-    elif chart_choice == "3":
-        chart_type = "candlestick"
-    else:
-        print("Invalid choice, defaulting to line chart.")
-        chart_type = "line"
-
-    return chart_type
+        return chart_type
 
 
 def get_time_series():
@@ -34,30 +71,45 @@ def get_time_series():
     print("2. TIME_SERIES_DAILY")
     print("3. TIME_SERIES_WEEKLY")
     print("4. TIME_SERIES_MONTHLY")
-    time_choice = input("Enter your choice (1-4): ").strip()
 
-    if time_choice == "1":
-        time_series = "TIME_SERIES_INTRADAY"
-    elif time_choice == "2":
-        time_series = "TIME_SERIES_DAILY"
-    elif time_choice == "3":
-        time_series = "TIME_SERIES_WEEKLY"
-    elif time_choice == "4":
-        time_series = "TIME_SERIES_MONTHLY"
-    else:
-        print("Invalid choice, defaulting to TIME_SERIES_DAILY.")
-        time_series = "TIME_SERIES_DAILY"
+    while True:
+        time_choice = input("Enter your choice (1-4): ").strip()
 
-    return time_series
+        if time_choice == "1":
+            time_series = "TIME_SERIES_INTRADAY"
+        elif time_choice == "2":
+            time_series = "TIME_SERIES_DAILY"
+        elif time_choice == "3":
+            time_series = "TIME_SERIES_WEEKLY"
+        elif time_choice == "4":
+            time_series = "TIME_SERIES_MONTHLY"
+        else:
+            print("Invalid choice, please choose 1-4.")
+            continue
+
+        return time_series
 
 
-def get_date():
-#Pranya
-    return()
+def get_dates():
+    while True:
+        start_input = input("Enter the start date (YYYY-MM-DD): ")
+        end_input = input("Enter the end date (YYYY-MM-DD): ")
+        try:
+            start_date = datetime.strptime(start_input, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_input, "%Y-%m-%d").date()
+        except ValueError:
+            print("Error: Invalid date format. Please enter a date in (YYYY-MM-DD) format.")
+            continue
+
+        if start_date > end_date:
+            print("Error: Start date cannot be later than end date. Please enter valid dates.")
+        else:
+            return start_date, end_date
+
+    
 
 
 def get_data(symbol, start_date, end_date, api_key, function):  
-    url = "https://www.alphavantage.co/query"
     params = {
         "function": function,
         "symbol": symbol,
@@ -79,18 +131,22 @@ def get_data(symbol, start_date, end_date, api_key, function):
     response.raise_for_status()
     data = response.json()
 
+    #Error checking incase the API returns an error because of rate limits or other reasons.
     key_check = TIME_SERIES_KEYS.get(function)
     if "Error Message" in data:
-        raise ValueError(f"API returned an error: {data['Error Message']}")
-    if not key_check or key_check not in data:
+        raise ValueError(f"API returned an error: {data["Error Message"]}")
+    if "Note" in data:
+        raise ValueError(f"API limit reached: {data["Note"]}")
+    if key_check not in data:
         raise ValueError(f"No time series data found. Response: {data}")
     
     raw_data = data[TIME_SERIES_KEYS[function]]
 
+    #Takes key value pairs from raw_data and makes a new sorted dictionary that only contains data between the user selected start_date and end_date
     filtered_data = {
         date: values
         for date, values in raw_data.items()
-        if start_date <= date <= end_date
+        if start_date <= datetime.strptime(date[:10], "%Y-%m-%d").date() <= end_date
     }
 
     sorted_data = dict(sorted(filtered_data.items()))
@@ -98,19 +154,25 @@ def get_data(symbol, start_date, end_date, api_key, function):
     return sorted_data
 
 
-example = "false"
+example = "true"
 if example == "true":
-    api_key = "EDR5KNC8XVI980TW"
-    function = "TIME_SERIES_INTRADAY"
-    symbol = "AAPL"
-    start_date = "2025-08-25"
-    end_date = "2025-09-30"
+    function = get_time_series()
+    symbol = get_symbol()
+    start_date, end_date = get_dates()
+    api_key = api_key
 
 try:
     stock_data = get_data(symbol, start_date, end_date, api_key, function)
     print(f"Data for {symbol} using {function} from {start_date} to {end_date}")
-    for date, values in stock_data.items():
-        print(f"{date} | Open: {values['1. open']} | High: {values['2. high']} | Low: {values['3. low']} | Close: {values['4. close']}")
+    if len(stock_data) == 0:
+        print("No data found for the selected date range.")
+    else:
+        for date, values in stock_data.items():
+            open_ = values.get("1. open")
+            high = values.get("2. high")
+            low = values.get("3. low")
+            close = values.get("4. close")
+            print(f"{date} | Open: {open_} | High: {high} | Low: {low} | Close: {close}")
 except ValueError as e:
     print(e)
 
