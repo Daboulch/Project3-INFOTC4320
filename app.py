@@ -4,6 +4,9 @@ import requests
 from datetime import datetime
 import sys
 
+import webbrowser
+
+
 api_key = "EDR5KNC8XVI980TW"
 url = "https://www.alphavantage.co/query"
 
@@ -153,30 +156,60 @@ def get_data(symbol, start_date, end_date, api_key, function):
     
     return sorted_data
 
+def create_graph(stock_data, symbol, chart_type='line'):
+    if not stock_data:
+        print("No data to display.")
+        return
 
-example = "true"
-if example == "true":
+    dates = list(stock_data.keys())
+    close_prices = [float(values['4. close']) for values in stock_data.values()]
+
+    # Choose chart type
+    if chart_type.lower() == 'line':
+        chart = pygal.Line(x_label_rotation=20, show_minor_x_labels=False)
+    elif chart_type.lower() == 'bar':
+        chart = pygal.Bar(x_label_rotation=20, show_minor_x_labels=False)
+    else:
+        # For candlestick, we can just use line as placeholder
+        chart = pygal.Line(x_label_rotation=20, show_minor_x_labels=False)
+        print("Candlestick not fully implemented, using line chart instead.")
+
+    chart.title = f"{symbol} Stock Prices"
+    chart.x_labels = dates
+    chart.add('Close Price', close_prices)
+
+    # Save and open graph
+    filename = f"{symbol}_stock_chart.svg"
+    chart.render_to_file(filename)
+    print(f"Graph saved as {filename} and opened in your browser.")
+    webbrowser.open(filename)
+    return()
+
+
+while True:
     function = get_time_series()
     symbol = get_symbol()
     start_date, end_date = get_dates()
     api_key = api_key
 
-try:
-    stock_data = get_data(symbol, start_date, end_date, api_key, function)
-    print(f"Data for {symbol} using {function} from {start_date} to {end_date}")
-    if len(stock_data) == 0:
-        print("No data found for the selected date range.")
-    else:
-        for date, values in stock_data.items():
-            open_ = values.get("1. open")
-            high = values.get("2. high")
-            low = values.get("3. low")
-            close = values.get("4. close")
-            print(f"{date} | Open: {open_} | High: {high} | Low: {low} | Close: {close}")
-except ValueError as e:
-    print(e)
+    try:
+        stock_data = get_data(symbol, start_date, end_date, api_key, function)
+        print(f"Data for {symbol} using {function} from {start_date} to {end_date}")
+        if len(stock_data) == 0:
+            print("No data found for the selected date range.")
+        else:
+            for date, values in stock_data.items():
+                open_ = values.get("1. open")
+                high = values.get("2. high")
+                low = values.get("3. low")
+                close = values.get("4. close")
+                print(f"{date} | Open: {open_} | High: {high} | Low: {low} | Close: {close}")
+            create_graph(stock_data, symbol, chart_type='line')
+    except ValueError as e:
+        print(e)
+ 
+    retry = input("\nWould you like to fetch another dataset? (y/n): ").strip().lower()
+    if retry != 'y':
+        print("Exiting program.")
+        break
 
-
-def create_graph():
-#Pranya
-    return()
